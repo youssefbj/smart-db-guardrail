@@ -1,0 +1,33 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.egg-info/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+terraform.tfplan
+override.tf.json
+
+# Rapport IA (recréé par le pipeline)
+ai-agent/validation_report.json
+
+# Logs
+*.log
+/tmp/
+
+# Secrets
+*secret*
+*credentials*
+*password*
+
+# VMware / Linux
+.DS_Store
+*~
+*.swp
