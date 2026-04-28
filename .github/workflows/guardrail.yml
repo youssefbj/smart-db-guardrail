@@ -1,0 +1,384 @@
+# ═══════════════════════════════════════════════════════════════
+# Smart-DB GitOps Guardrail — Pipeline CI/CD
+#
+# Se déclenche sur push/PR vers "main" quand ces fichiers changent :
+#   configs/          → les configs PostgreSQL
+#   k8s/postgres/     → les manifests Kubernetes
+#   ai-agent/         → le script Python
+#   terraform/        → le code Terraform
+# ═══════════════════════════════════════════════════════════════
+name: "🛡️ Smart-DB GitOps Guardrail"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "configs/**"
+      - "k8s/postgres/**"
+      - "ai-agent/**"
+      - "terraform/**"
+
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "configs/**"
+      - "k8s/postgres/**"
+      - "ai-agent/**"
+      - "terraform/**"
+
+  # Permet de lancer manuellement depuis GitHub.com → onglet Actions
+  workflow_dispatch:
+    inputs:
+      config_file:
+        description: "Fichier à valider"
+        required: false
+        default: "configs/postgresql.conf"
+
+
+jobs:
+
+# ═══════════════════════════════════════════════════════════════
+# JOB 1 : VALIDATION TERRAFORM v1.7.5
+# Vérifie que le code est syntaxiquement correct.
+# Note : l'avertissement "out of date" dans les logs est normal.
+# ═══════════════════════════════════════════════════════════════
+  terraform-validate:
+    name: "📋 Terraform Validate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Récupération du code"
+        uses: actions/checkout@v4
+
+      - name: "⚙️  Setup Terraform v1.7.5"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: "🔧 Init"
+        run: |
+          cd terraform/
+          terraform init -backend=false
+          echo "✅ Init OK"
+
+      - name: "🔍 Validate"
+        run: |
+          cd terraform/
+          terraform validate
+          echo "✅ Syntaxe Terraform OK"
+
+      - name: "📐 Format check"
+        run: |
+          cd terraform/
+          if ! terraform fmt -check -recursive; then
+            echo "❌ Formatage incorrect."
+            echo "   Solution : cd terraform && terraform fmt -recursive"
+            exit 1
+          fi
+          echo "✅ Formatage OK"
+
+
+# ═══════════════════════════════════════════════════════════════
+# JOB 2 : TESTS UNITAIRES PYTHON 3.11
+# Ces tests ne nécessitent PAS Ollama.
+# Ils vérifient la logique de l'agent Python.
+# ═══════════════════════════════════════════════════════════════
+  python-tests:
+    name: "🧪 Tests Python"
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+
+    steps:
+      - name: "📥 Récupération du code"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "📦 Installation des dépendances"
+        run: |
+          pip install --upgrade pip
+          pip install -r ai-agent/requirements.txt
+          echo "✅ Dépendances installées"
+
+      - name: "🧪 Lancement des tests"
+        run: |
+          python ai-agent/test_validator.py
+          echo "✅ Tous les tests passés"
+
+
+# ═══════════════════════════════════════════════════════════════
+# JOB 3 : GUARDRAIL IA (CŒUR DU PROJET)
+#
+# Simule Ollama avec un serveur Flask (Mock).
+# Le Mock analyse les mêmes règles de sécurité que phi3:mini
+# et retourne le même format de réponse (VERDICT + JSON).
+#
+# Pourquoi un Mock ?
+# → Les runners GitHub n'ont pas Ollama installé.
+# → phi3:mini = 2.3 GB = trop long à télécharger en CI.
+# → Le Mock analyse vraiment la config (pas un résultat fixe).
+# ═══════════════════════════════════════════════════════════════
+  ai-guardrail:
+    name: "🤖 Guardrail IA"
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, python-tests]
+
+    steps:
+      - name: "📥 Récupération du code"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "📦 Installation des dépendances"
+        run: |
+          pip install --upgrade pip
+          pip install -r ai-agent/requirements.txt flask
+
+      - name: "🎭 Démarrage du Mock Ollama"
+        run: |
+          # ─────────────────────────────────────────────────────
+          # Ce serveur Flask simule Ollama.
+          # Il reçoit les mêmes requêtes que le vrai Ollama
+          # et retourne les mêmes réponses.
+          # ─────────────────────────────────────────────────────
+          python3 << 'MOCK_SCRIPT'
+          from flask import Flask, request, jsonify
+          import json, threading, time
+
+          app = Flask(__name__)
+
+          # Mêmes règles de sécurité que dans prompts.py
+          REGLES_CRITIQUES = [
+              ("ssl = off",
+               "SSL désactivé — les données voyagent en clair",
+               "ssl = on",
+               30),
+              ("listen_addresses = '*'",
+               "Réseau ouvert — base exposée à tout Internet",
+               "listen_addresses = 'localhost'",
+               30),
+              ("password_encryption = md5",
+               "Algorithme md5 cassé depuis 2004",
+               "password_encryption = scram-sha-256",
+               30),
+          ]
+
+          REGLES_HAUTES = [
+              ("log_connections = off",
+               "Connexions non journalisées",
+               "log_connections = on",
+               15),
+              ("log_failed_authentications = off",
+               "Échecs d'authentification non tracés",
+               "log_failed_authentications = on",
+               15),
+          ]
+
+          BONS_POINTS = [
+              ("ssl = on",                        "ssl = on — chiffrement activé ✅"),
+              ("scram-sha-256",                   "scram-sha-256 — algorithme fort ✅"),
+              ("listen_addresses = 'localhost'",  "listen_addresses restreint ✅"),
+              ("log_connections = on",            "logs de connexion activés ✅"),
+              ("log_failed_authentications = on", "alertes intrusion activées ✅"),
+          ]
+
+          def analyser_config(contenu):
+              risques  = []
+              positifs = []
+              score    = 100
+
+              for pattern, desc, correction, malus in REGLES_CRITIQUES:
+                  if pattern in contenu:
+                      score -= malus
+                      risques.append({
+                          "niveau":      "CRITIQUE",
+                          "description": desc,
+                          "ligne_config": pattern,
+                          "correction":  correction
+                      })
+
+              for pattern, desc, correction, malus in REGLES_HAUTES:
+                  if pattern in contenu:
+                      score -= malus
+                      risques.append({
+                          "niveau":      "HAUT",
+                          "description": desc,
+                          "ligne_config": pattern,
+                          "correction":  correction
+                      })
+
+              for pattern, desc in BONS_POINTS:
+                  if pattern in contenu:
+                      positifs.append(desc)
+
+              score   = max(0, min(100, score))
+              verdict = "OUI" if score >= 70 else "NON"
+
+              return {
+                  "verdict":         verdict,
+                  "score_securite":  score,
+                  "risques":         risques,
+                  "points_positifs": positifs,
+                  "recommandations": [r["correction"] for r in risques],
+                  "resume": f"Score {score}/100. "
+                            f"{'Config sécurisée.' if verdict == 'OUI' else 'Risques critiques.'}"
+              }
+
+          @app.route('/api/generate', methods=['POST'])
+          def generate():
+              contenu = request.json.get('prompt', '')
+              r       = analyser_config(contenu)
+              reponse = f"VERDICT: {r['verdict']}\n{json.dumps(r)}"
+              return jsonify({'response': reponse})
+
+          @app.route('/api/tags', methods=['GET'])
+          def tags():
+              return jsonify({'models': [{'name': 'phi3:mini'}]})
+
+          def lancer_serveur():
+              app.run(host='0.0.0.0', port=11434, debug=False, use_reloader=False)
+
+          thread = threading.Thread(target=lancer_serveur)
+          thread.daemon = True
+          thread.start()
+          print("🎭 Mock Ollama démarré sur le port 11434")
+          time.sleep(86400)
+          MOCK_SCRIPT &
+
+          # Attends que le Mock soit prêt (max 20 secondes)
+          for i in $(seq 1 20); do
+            if curl -s http://localhost:11434/api/tags | grep -q "phi3"; then
+              echo "✅ Mock Ollama prêt (tentative $i/20)"
+              break
+            fi
+            echo "   Démarrage... ($i/20)"
+            sleep 1
+          done
+
+      - name: "🎯 Sélection de la config à analyser"
+        id: config
+        run: |
+          FICHIER="${{ github.event.inputs.config_file }}"
+          if [ -z "$FICHIER" ]; then
+            FICHIER="configs/postgresql.conf"
+          fi
+          echo "fichier=$FICHIER" >> $GITHUB_OUTPUT
+          echo "📋 Config sélectionnée : $FICHIER"
+
+      - name: "🛡️ Exécution du Guardrail IA"
+        id: guardrail
+        env:
+          OLLAMA_URL:   "http://localhost:11434/api/generate"
+          OLLAMA_MODEL: "phi3:mini"
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "  🛡️  SMART-DB GITOPS GUARDRAIL"
+          echo "  Env : VMware Ubuntu 22.04 / i5-6198DU (Mock CI)"
+          echo "═══════════════════════════════════════════════════"
+
+          python ai-agent/validator.py "${{ steps.config.outputs.fichier }}"
+          CODE=$?
+
+          if [ $CODE -eq 0 ]; then
+            echo "verdict=OUI" >> $GITHUB_OUTPUT
+          else
+            echo "verdict=NON" >> $GITHUB_OUTPUT
+          fi
+
+          exit $CODE
+
+      - name: "📊 Rapport complet (affiché même si le job échoue)"
+        if: always()
+        run: |
+          echo "════════════════════════════════════════════════"
+          echo "  RAPPORT DE VALIDATION IA"
+          echo "════════════════════════════════════════════════"
+          if [ -f "ai-agent/validation_report.json" ]; then
+            python3 -m json.tool ai-agent/validation_report.json
+          else
+            echo "Aucun rapport généré."
+          fi
+
+      - name: "💾 Sauvegarde du rapport"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "rapport-validation-ia-${{ github.run_number }}"
+          path: "ai-agent/validation_report.json"
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: "📋 Résumé dans l'interface GitHub"
+        if: always()
+        run: |
+          V="${{ steps.guardrail.outputs.verdict }}"
+          {
+            echo "## 🛡️ Smart-DB GitOps Guardrail — Run #${{ github.run_number }}"
+            echo ""
+            echo "| Paramètre | Valeur |"
+            echo "|-----------|--------|"
+            echo "| Terraform | v1.7.5 |"
+            echo "| Python | 3.11 |"
+            echo "| Mock Ollama | phi3:mini simulé |"
+            echo "| Env | VMware Ubuntu 22.04 / i5-6198DU |"
+            echo ""
+            if [ "$V" = "OUI" ]; then
+              echo "## ✅ CONFIGURATION APPROUVÉE"
+              echo "PostgreSQL peut être déployé. ArgoCD synchronise automatiquement."
+            else
+              echo "## 🚫 CONFIGURATION REJETÉE"
+              echo "Déploiement bloqué. Corrige la configuration PostgreSQL et re-pousse."
+            fi
+          } >> $GITHUB_STEP_SUMMARY
+
+
+# ═══════════════════════════════════════════════════════════════
+# JOB 4 : CONFIRMATION DU DÉPLOIEMENT
+# S'exécute SEULEMENT si les 3 jobs précédents ont réussi
+# ET SEULEMENT sur push vers main (pas sur une PR)
+# ═══════════════════════════════════════════════════════════════
+  deployment-ready:
+    name: "🚀 Déploiement Autorisé"
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, python-tests, ai-guardrail]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "✅ Confirmation"
+        run: |
+          echo "╔══════════════════════════════════════════════╗"
+          echo "║   ✅ TOUS LES GUARDRAILS SONT PASSÉS          ║"
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║   Terraform validate : ✅                    ║"
+          echo "║   Tests Python 3.11  : ✅                    ║"
+          echo "║   Guardrail IA       : ✅                    ║"
+          echo "╠══════════════════════════════════════════════╣"
+          echo "║   ArgoCD surveille le repo et va déployer.  ║"
+          echo "╚══════════════════════════════════════════════╝"
+          echo ""
+          echo "  Commit  : ${{ github.sha }}"
+          echo "  Auteur  : ${{ github.actor }}"
+          echo "  Date    : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: "📋 Résumé déploiement"
+        run: |
+          {
+            echo "## 🚀 Déploiement Autorisé"
+            echo ""
+            echo "| Étape | Statut |"
+            echo "|-------|--------|"
+            echo "| Terraform validate | ✅ |"
+            echo "| Tests Python | ✅ |"
+            echo "| Guardrail IA | ✅ |"
+            echo "| **Déploiement ArgoCD** | 🚀 **En cours** |"
+          } >> $GITHUB_STEP_SUMMARY
