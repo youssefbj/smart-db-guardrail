@@ -120,64 +120,64 @@ resource "helm_release" "argocd" {
   namespace  = var.argocd_namespace
 
   # Mode HTTP (pas HTTPS) pour simplifier l'accès local
-  set { 
-  name = "configs.params.server\\.insecure"
-   value = "true" 
-   }
+  set {
+    name  = "configs.params.server\\.insecure"
+    value = "true"
+  }
 
-# ─── Limites mémoire pour VM 10GB / i5-6198DU ───────────────
-set {
-  name  = "server.resources.requests.memory"
-  value = "128Mi"
-}
+  # ─── Limites mémoire pour VM 10GB / i5-6198DU ───────────────
+  set {
+    name  = "server.resources.requests.memory"
+    value = "128Mi"
+  }
 
-set {
-  name  = "server.resources.limits.memory"
-  value = "256Mi"
-}
+  set {
+    name  = "server.resources.limits.memory"
+    value = "256Mi"
+  }
 
-set {
-  name  = "repoServer.resources.requests.memory"
-  value = "64Mi"
-}
+  set {
+    name  = "repoServer.resources.requests.memory"
+    value = "64Mi"
+  }
 
-set {
-  name  = "repoServer.resources.limits.memory"
-  value = "128Mi"
-}
+  set {
+    name  = "repoServer.resources.limits.memory"
+    value = "128Mi"
+  }
 
-set {
-  name  = "controller.resources.requests.memory"
-  value = "128Mi"
-}
+  set {
+    name  = "controller.resources.requests.memory"
+    value = "128Mi"
+  }
 
-set {
-  name  = "controller.resources.limits.memory"
-  value = "256Mi"
-}
+  set {
+    name  = "controller.resources.limits.memory"
+    value = "256Mi"
+  }
 
-set {
-  name  = "applicationSet.resources.requests.memory"
-  value = "32Mi"
-}
+  set {
+    name  = "applicationSet.resources.requests.memory"
+    value = "32Mi"
+  }
 
-set {
-  name  = "applicationSet.resources.limits.memory"
-  value = "64Mi"
-}
+  set {
+    name  = "applicationSet.resources.limits.memory"
+    value = "64Mi"
+  }
 
-set {
-  name  = "notifications.resources.requests.memory"
-  value = "32Mi"
-}
+  set {
+    name  = "notifications.resources.requests.memory"
+    value = "32Mi"
+  }
 
-set {
-  name  = "notifications.resources.limits.memory"
-  value = "64Mi"
-}
+  set {
+    name  = "notifications.resources.limits.memory"
+    value = "64Mi"
+  }
 
   wait    = true
-  timeout = 600  # 10 minutes max
+  timeout = 600 # 10 minutes max
 }
 
 # ══════════════════════════════════════════════════════════════════
@@ -194,58 +194,58 @@ resource "helm_release" "monitoring" {
   version    = var.monitoring_chart_version
   namespace  = var.monitoring_namespace
 
-set {
-  name  = "grafana.adminPassword"
-  value = "admin123"
-}
+  set {
+    name  = "grafana.adminPassword"
+    value = "admin123"
+  }
 
-set {
-  name  = "grafana.service.type"
-  value = "NodePort"
-}
+  set {
+    name  = "grafana.service.type"
+    value = "NodePort"
+  }
 
-set {
-  name  = "grafana.service.nodePort"
-  value = "30300"
-}
+  set {
+    name  = "grafana.service.nodePort"
+    value = "30300"
+  }
 
-# Prometheus sur NodePort 30090
-set {
-  name  = "prometheus.service.type"
-  value = "NodePort"
-}
+  # Prometheus sur NodePort 30090
+  set {
+    name  = "prometheus.service.type"
+    value = "NodePort"
+  }
 
-set {
-  name  = "prometheus.service.nodePort"
-  value = "30090"
-}
+  set {
+    name  = "prometheus.service.nodePort"
+    value = "30090"
+  }
 
   # Limites mémoire
-set {
-  name  = "prometheus.prometheusSpec.resources.requests.memory"
-  value = "256Mi"
-}
+  set {
+    name  = "prometheus.prometheusSpec.resources.requests.memory"
+    value = "256Mi"
+  }
 
-set {
-  name  = "prometheus.prometheusSpec.resources.limits.memory"
-  value = "512Mi"
-}
+  set {
+    name  = "prometheus.prometheusSpec.resources.limits.memory"
+    value = "512Mi"
+  }
 
-set {
-  name  = "grafana.resources.requests.memory"
-  value = "64Mi"
-}
+  set {
+    name  = "grafana.resources.requests.memory"
+    value = "64Mi"
+  }
 
-set {
-  name  = "grafana.resources.limits.memory"
-  value = "128Mi"
-}
+  set {
+    name  = "grafana.resources.limits.memory"
+    value = "128Mi"
+  }
 
-set {
-  name  = "nodeExporter.enabled"
-  value = "false"
-}
+  set {
+    name  = "nodeExporter.enabled"
+    value = "false"
+  }
 
   wait    = true
-  timeout = 900  # 15 minutes max
+  timeout = 900 # 15 minutes max
 }
