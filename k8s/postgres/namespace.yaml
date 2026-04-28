@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database
+  labels:
+    project: smart-db-guardrail
+    managed-by: argocd
