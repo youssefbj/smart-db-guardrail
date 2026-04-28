@@ -149,7 +149,7 @@ jobs:
           # Il reçoit les mêmes requêtes que le vrai Ollama
           # et retourne les mêmes réponses.
           # ─────────────────────────────────────────────────────
-          python3 << 'MOCK_SCRIPT'
+          python3 << 'MOCK_SCRIPT' &
           from flask import Flask, request, jsonify
           import json, threading, time
 
@@ -251,7 +251,7 @@ jobs:
           thread.start()
           print("🎭 Mock Ollama démarré sur le port 11434")
           time.sleep(86400)
-          MOCK_SCRIPT &
+          MOCK_SCRIPT
 
           # Attends que le Mock soit prêt (max 20 secondes)
           for i in $(seq 1 20); do
