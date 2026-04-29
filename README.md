@@ -1,6 +1,6 @@
 # 🛡️ Smart-DB GitOps Guardrail
 
-[![CI/CD Guardrail](https://github.com/youssefbj/smart-db-guardrail/actions/workflows/guardrail.yml/badge.svg)](https://github.com/youssefbj/smart-db-guardrail/actions/workflows/guardrail.yml)
+[![CI/CD Guardrail](https://github.com/${GITHUB_USERNAME}/smart-db-guardrail/actions/workflows/guardrail.yml/badge.svg)](https://github.com/${GITHUB_USERNAME}/smart-db-guardrail/actions/workflows/guardrail.yml)
 [![Terraform](https://img.shields.io/badge/Terraform-1.7.5-7B42BC?logo=terraform)](https://terraform.io)
 [![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo)](https://argo-cd.readthedocs.io)
 [![Ollama](https://img.shields.io/badge/AI-phi3:mini-blue)](https://ollama.com)
@@ -8,15 +8,15 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://postgresql.org)
 [![Grafana](https://img.shields.io/badge/Grafana-10.x-F46800?logo=grafana)](https://grafana.com)
 
-> **Pipeline GitOps qui bloque automatiquement tout déploiement PostgreSQL non sécurisé — validation IA locale via Ollama + phi3:mini, tournant dans une VM VMware Ubuntu 22.04.**
+> **GitOps pipeline that automatically blocks any insecure PostgreSQL deployment — local AI validation using Ollama + phi3:mini, running inside a VMware Ubuntu 22.04 VM.**
 
 ---
 
 ## 🎯 Concept
 
-Ce projet implémente le pattern **"Policy-as-Code assisté par IA"** :
-avant chaque déploiement, une IA analyse la configuration PostgreSQL
-et **bloque le pipeline** si elle détecte un risque de sécurité.
+This project implements the **"AI-assisted Policy-as-Code"** pattern:  
+before each deployment, an AI analyzes the PostgreSQL configuration  
+and **blocks the pipeline** if a security risk is detected.
 
 ```
 git push
@@ -26,98 +26,98 @@ GitHub Actions CI
     ├── Terraform validate .............. ✅
     ├── Python unit tests (13 tests) .... ✅
     └── AI Guardrail (Ollama phi3:mini)
-            ├── OUI → ArgoCD déploie PostgreSQL ✅
-            └── NON → Pipeline bloqué 🚫
+            ├── YES → ArgoCD deploys PostgreSQL ✅
+            └── NO  → Pipeline blocked 🚫
 ```
 
 ---
 
-## 🖥️ Environnement de Développement
+## 🖥️ Development Environment
 
-| Composant | Détail |
+| Component | Details |
 |-----------|--------|
-| Hôte | Windows 10 64-bit + VMware Workstation/Player |
+| Host | Windows 10 64-bit + VMware Workstation/Player |
 | VM | Ubuntu 22.04.3 LTS Desktop |
-| CPU | Intel i5-6198DU (2 cœurs / 4 threads) — CPU-only pour l'IA |
-| RAM VM | 10 GB sur 16 GB totaux |
-| GPU | Nvidia 920MX (non utilisé — phi3:mini tourne sur CPU) |
-| Réseau VM | NAT VMware → accès depuis Windows via IP VM |
+| CPU | Intel i5-6198DU (2 cores / 4 threads) — CPU-only for AI |
+| VM RAM | 10 GB out of 16 GB total |
+| GPU | Nvidia 920MX (not used — phi3:mini runs on CPU) |
+| VM Network | VMware NAT → accessible from Windows via VM IP |
 
 ---
 
-## 🏗️ Stack Technique
+## 🏗️ Tech Stack
 
-| Outil | Rôle | Version |
-|-------|------|---------|
-| K3d | Cluster Kubernetes local (dans Docker) | v5.x |
+| Tool | Role | Version |
+|------|------|---------|
+| K3d | Local Kubernetes cluster (Docker-based) | v5.x |
 | Terraform | Infrastructure as Code | v1.7.5 |
 | ArgoCD | GitOps Continuous Delivery | v3.x |
-| Ollama + phi3:mini | IA locale CPU (2.3 GB) | 0.x |
-| PostgreSQL | Base de données protégée | 16-alpine |
-| Prometheus | Collecte métriques | v2.x |
-| Grafana | Dashboard supervision + rapport IA | v10.x |
-| GitHub Actions | Pipeline CI/CD (4 jobs) | — |
-| Python | Agent de validation IA | 3.11.x (venv isolé) |
+| Ollama + phi3:mini | Local AI (CPU, 2.3 GB) | 0.x |
+| PostgreSQL | Protected database | 16-alpine |
+| Prometheus | Metrics collection | v2.x |
+| Grafana | Monitoring dashboard + AI report | v10.x |
+| GitHub Actions | CI/CD pipeline (4 jobs) | — |
+| Python | AI validation agent | 3.11.x (isolated venv) |
 
 ---
 
-## 🚀 Démarrage Rapide
+## 🚀 Quick Start
 
 ```bash
-# Dans la VM Ubuntu (terminal Ubuntu dans VMware)
-git clone https://github.com/youssefbj/smart-db-guardrail
+# Inside Ubuntu VM (VMware terminal)
+git clone https://github.com/${GITHUB_USERNAME}/smart-db-guardrail
 cd smart-db-guardrail
 ./scripts/bootstrap.sh
 ```
 
-Le script crée automatiquement :
-- ✅ Cluster K3d avec 3 nodes
-- ✅ ArgoCD en GitOps sur le repo GitHub
-- ✅ PostgreSQL supervisé par Prometheus
-- ✅ Dashboard Grafana avec rapport IA
+The script automatically creates:
+- ✅ K3d cluster with 3 nodes
+- ✅ ArgoCD GitOps linked to the GitHub repository
+- ✅ PostgreSQL monitored by Prometheus
+- ✅ Grafana dashboard with AI validation reports
 
-**Accès depuis ton navigateur Windows :**
+**Access from your Windows browser:**
 - 🔄 ArgoCD : `http://IP_VM:8080`
 - 📊 Grafana : `http://IP_VM:30300`
 
 ---
 
-## 📸 Démonstration (dans la VM Ubuntu)
+## 📸 Demo (inside Ubuntu VM)
 
-### ✅ Config sécurisée → Approuvée (60-120 sec sur i5)
+### ✅ Secure config → Approved (60–120 sec on i5)
 
 ```bash
 source venv/bin/activate
 python ai-agent/validator.py configs/postgresql.conf
-# → ✅ APPROUVÉ — Score: 85/100 — Exit code: 0
-# → ArgoCD synchronise automatiquement
+# → ✅ APPROVED — Score: 85/100 — Exit code: 0
+# → ArgoCD auto-sync triggered
 ```
 
-### 🚫 Config dangereuse → Bloquée
+### 🚫 Unsafe config → Blocked
 
 ```bash
 python ai-agent/validator.py configs/postgresql-bad.conf
-# → 🚫 REJETÉ — Score: 10/100 — Exit code: 1
-# → Pipeline GitHub Actions stoppé
-# → ArgoCD ne déploie rien
+# → 🚫 REJECTED — Score: 10/100 — Exit code: 1
+# → GitHub Actions pipeline stopped
+# → ArgoCD does not deploy anything
 ```
 
 ---
 
-## 📁 Structure du Projet
+## 📁 Project Structure
 
 ```
 smart-db-guardrail/
 ├── .github/workflows/
-│   └── guardrail.yml           ← Pipeline 4 jobs CI/CD
+│   └── guardrail.yml           ← 4-job CI/CD pipeline
 ├── terraform/
-│   ├── main.tf                 ← Cluster K3d + ArgoCD + Grafana
+│   ├── main.tf                 ← K3d cluster + ArgoCD + Grafana
 │   ├── variables.tf
 │   ├── providers.tf
 │   └── outputs.tf
 ├── k8s/
 │   ├── argocd/
-│   │   └── application.yaml   ← GitOps : surveille k8s/postgres/
+│   │   └── application.yaml   ← GitOps: watches k8s/postgres/
 │   ├── postgres/
 │   │   ├── deployment.yaml    ← PostgreSQL 16 + exporter sidecar
 │   │   ├── service.yaml
@@ -128,60 +128,60 @@ smart-db-guardrail/
 │       ├── prometheus/servicemonitor.yaml
 │       └── grafana/dashboard.json
 ├── ai-agent/
-│   ├── validator.py           ← Agent IA principal
-│   ├── prompts.py             ← Instructions pour phi3:mini
-│   ├── test_validator.py      ← 13 tests unitaires
+│   ├── validator.py           ← Main AI agent
+│   ├── prompts.py             ← Instructions for phi3:mini
+│   ├── test_validator.py      ← 13 unit tests
 │   └── requirements.txt
 ├── configs/
-│   ├── postgresql.conf        ← Config sécurisée (IA approuve ✅)
-│   └── postgresql-bad.conf   ← Config dangereuse (IA bloque 🚫)
+│   ├── postgresql.conf        ← Secure config (AI approves ✅)
+│   └── postgresql-bad.conf    ← Unsafe config (AI blocks 🚫)
 ├── scripts/
-│   ├── bootstrap.sh           ← Démarrage en 1 commande
-│   ├── destroy.sh             ← Nettoyage complet
+│   ├── bootstrap.sh           ← Start everything in one command
+│   ├── destroy.sh             ← Full cleanup
 │   └── import-grafana-dashboard.sh
 └── README.md
 ```
 
 ---
 
-## 🔑 Compétences Démontrées
+## 🔑 Skills Demonstrated
 
-| Domaine | Preuve concrète |
-|---------|-----------------|
-| **GitOps** | ArgoCD surveille GitHub et déploie automatiquement |
-| **IaC** | Terraform crée cluster + services en une commande |
-| **AIOps** | IA locale intégrée dans le pipeline CI/CD |
-| **DevSecOps** | Policy-as-Code : guardrail bloque les mauvaises configs |
+| Domain | Concrete Evidence |
+|--------|------------------|
+| **GitOps** | ArgoCD automatically deploys from GitHub |
+| **IaC** | Terraform provisions the entire infrastructure |
+| **AIOps** | Local AI integrated into CI/CD |
+| **DevSecOps** | Policy-as-Code blocks unsafe configurations |
 | **Kubernetes** | K3d, namespaces, pods, services, configmaps, secrets |
-| **Helm** | ArgoCD + kube-prometheus-stack installés via Helm |
-| **Observabilité** | Prometheus + Grafana + rapport IA dans le dashboard |
-| **CI/CD** | GitHub Actions 4 jobs avec artefacts |
-| **Python** | Agent IA, tests unitaires, venv isolé |
+| **Helm** | ArgoCD + kube-prometheus-stack via Helm |
+| **Observability** | Prometheus + Grafana + AI report dashboard |
+| **CI/CD** | GitHub Actions 4-job pipeline |
+| **Python** | AI agent, unit tests, isolated venv |
 
 ---
 
-## 🛠️ Commandes Utiles
+## 🛠️ Useful Commands
 
 ```bash
-# Voir l'état du cluster
+# Check cluster status
 kubectl get pods --all-namespaces
 
-# Voir ArgoCD
+# ArgoCD
 argocd app list
 argocd app get smartdb-postgres
 
-# Tester l'IA manuellement
+# Test AI manually
 source venv/bin/activate
 python ai-agent/validator.py configs/postgresql.conf
 
-# Voir les logs PostgreSQL
+# PostgreSQL logs
 kubectl logs -n database deploy/postgres -c postgres --tail=20
 
-# Supprimer tout
+# Destroy everything
 ./scripts/destroy.sh
 ```
 
 ---
 
-*Développé par Youssef Ben Jannet — DevOps & Cloud Engineer*
-*Environnement : Windows 10 + VMware + Ubuntu 22.04 LTS*
+*Developed by Youssef Ben Jannet — DevOps & Cloud Engineer*  
+*Environment: Windows 10 + VMware + Ubuntu 22.04 LTS*
