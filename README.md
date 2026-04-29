@@ -183,5 +183,5 @@ kubectl logs -n database deploy/postgres -c postgres --tail=20
 
 ---
 
-*Développé par Youssef Ben Jemaa — DevOps & Cloud Engineer*
+*Développé par Youssef Ben Jannet — DevOps & Cloud Engineer*
 *Environnement : Windows 10 + VMware + Ubuntu 22.04 LTS*
