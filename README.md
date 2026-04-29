@@ -1,6 +1,6 @@
 # 🛡️ Smart-DB GitOps Guardrail
 
-[![CI/CD Guardrail](https://github.com/${GITHUB_USERNAME}/smart-db-guardrail/actions/workflows/guardrail.yml/badge.svg)](https://github.com/${GITHUB_USERNAME}/smart-db-guardrail/actions/workflows/guardrail.yml)
+[![CI/CD Guardrail](https://github.com/youssefbj/smart-db-guardrail/actions/workflows/guardrail.yml/badge.svg)](https://github.com/youssefbj/smart-db-guardrail/actions/workflows/guardrail.yml)
 [![Terraform](https://img.shields.io/badge/Terraform-1.7.5-7B42BC?logo=terraform)](https://terraform.io)
 [![ArgoCD](https://img.shields.io/badge/ArgoCD-GitOps-EF7B4D?logo=argo)](https://argo-cd.readthedocs.io)
 [![Ollama](https://img.shields.io/badge/AI-phi3:mini-blue)](https://ollama.com)
