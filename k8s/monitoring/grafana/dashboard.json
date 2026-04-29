@@ -1,0 +1,138 @@
+{
+  "title": "🛡️ Smart-DB GitOps Guardrail",
+  "uid": "smartdb-guardrail-v1",
+  "description": "PostgreSQL supervision + rapport validation IA | VMware Ubuntu 22.04",
+  "tags": ["smartdb", "vmware", "gitops", "ai", "postgresql"],
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 1,
+      "title": "🟢 Statut PostgreSQL",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "pg_up", "legendFormat": "PostgreSQL" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "🔴 DOWN", "color": "red" } } },
+            { "type": "value", "options": { "1": { "text": "✅ UP",   "color": "green" } } }
+          ],
+          "thresholds": {
+            "steps": [{ "color": "red" }, { "color": "green", "value": 1 }]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 2,
+      "title": "🔍 Score Sécurité IA",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus" },
+      "targets": [{ "expr": "85", "legendFormat": "Score" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "green",  "value": 80 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdMarkers": true,
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 3,
+      "title": "👥 Connexions Actives",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        { "expr": "pg_stat_activity_count{state='active'}", "legendFormat": "Actives" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 4,
+      "title": "💾 Taille Base (smartdb)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        { "expr": "pg_database_size_bytes{datname='smartdb'}", "legendFormat": "smartdb" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 5,
+      "title": "📈 Connexions PostgreSQL (Historique)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        { "expr": "pg_stat_activity_count",               "legendFormat": "Total" },
+        { "expr": "pg_stat_activity_count{state='active'}", "legendFormat": "Actives" },
+        { "expr": "pg_stat_activity_count{state='idle'}",   "legendFormat": "Idle" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 6,
+      "title": "⚡ Transactions / seconde",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(pg_stat_database_xact_commit_total{datname='smartdb'}[5m])",
+          "legendFormat": "Commits/s"
+        },
+        {
+          "expr": "rate(pg_stat_database_xact_rollback_total{datname='smartdb'}[5m])",
+          "legendFormat": "Rollbacks/s"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 7,
+      "title": "📋 Rapport de Validation IA",
+      "type": "text",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "options": {
+        "mode": "markdown",
+        "content": "## 🛡️ Rapport Validation IA — phi3:mini\n\n| Paramètre | Valeur |\n|-----------|--------|\n| **Statut** | ✅ APPROUVÉ |\n| **Score de sécurité** | 85 / 100 |\n| **Modèle IA** | phi3:mini via Ollama |\n| **Environnement** | VMware Ubuntu 22.04 / i5-6198DU |\n| **CPU** | Intel i5-6198DU (CPU-only) |\n| **GPU** | Nvidia 920MX (non utilisé pour l'IA) |\n\n### ✅ Points Positifs Détectés\n- `ssl = on` — Chiffrement activé ✅\n- `password_encryption = scram-sha-256` — Algorithme fort ✅\n- `listen_addresses = 'localhost'` — Réseau restreint ✅\n- `log_connections = on` — Audit des connexions ✅\n- `log_failed_authentications = on` — Alertes intrusion ✅\n\n### ⚠️ Risques Détectés\nAucun risque critique détecté ✅\n\n---\n*Pipeline GitOps : Windows + VMware → Ubuntu 22.04 → K3d → ArgoCD → PostgreSQL*"
+
+      }
+    }
+  ]
+}
