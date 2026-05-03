@@ -8,26 +8,79 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://postgresql.org)
 [![Grafana](https://img.shields.io/badge/Grafana-10.x-F46800?logo=grafana)](https://grafana.com)
 
-> **GitOps pipeline that automatically blocks any insecure PostgreSQL deployment — local AI validation using Ollama + phi3:mini, running inside a VMware Ubuntu 22.04 VM.**
+> **AI-powered DevSecOps pipeline for secure PostgreSQL deployments through intelligent CI/CD guardrails**
+> > **End-to-end AI-driven GitOps pipeline where each commit is validated by a local LLM (Ollama / phi3:mini), enforcing Policy-as-Code to automatically block insecure PostgreSQL configurations before they reach Kubernetes, with full observability via Prometheus and Grafana**
 
 ---
 
 ## 🎯 Concept
 
-This project implements the **"AI-assisted Policy-as-Code"** pattern:  
-before each deployment, an AI analyzes the PostgreSQL configuration  
-and **blocks the pipeline** if a security risk is detected.
+This project implements an **"AI-assisted Policy-as-Code"** approach for database security.
+
+Before every deployment, a PostgreSQL configuration (postgresql.conf) is analyzed and scored based on security risk:
+- Safe configurations are automatically approved  
+- Risky configurations are blocked at the CI/CD level  
+
+This ensures that no insecure configuration can be deployed to the Kubernetes cluster.
+---
 
 ```
-git push
+DEVELOPER
     │
+    │  git push (modifies postgresql.conf)
     ▼
-GitHub Actions CI
-    ├── Terraform validate .............. ✅
-    ├── Python unit tests (13 tests) .... ✅
-    └── AI Guardrail (Ollama phi3:mini)
-            ├── YES → ArgoCD deploys PostgreSQL ✅
-            └── NO  → Pipeline blocked 🚫
+GITHUB REPOSITORY
+    │
+    │  Automatically triggers the pipeline
+    ▼
+GITHUB ACTIONS — 4 Sequential Validation Stages
+    │
+    ├── 1. Terraform Validate
+    │       → Validates syntax and integrity of Infrastructure as Code
+    │
+    ├── 2. Python Unit Tests
+    │       → Ensures the AI agent is functioning correctly
+    │
+    ├── 3. AI Guardrail (Core Component)
+    │       → Python agent sends postgresql.conf to Ollama (phi3:mini)
+    │       → AI analyzes configuration and returns a security score
+    │       │
+    │       ├── Score ≥ 70 → APPROVED → exit code 0
+    │       │                   Pipeline continues ✅
+    │       │
+    │       └── Score < 70 → REJECTED → exit code 1
+    │                           Pipeline BLOCKED 🚫
+    │                           No deployment triggered
+    │
+    └── 4. Deployment Confirmation
+            → Runs ONLY if all previous stages succeed
+
+    │
+    │  If validation is successful
+    ▼
+ARGOCD — GitOps Deployment
+    │
+    │  Continuously monitors the repository
+    │  Detects validated commits
+    │  Automatically synchronizes cluster state
+    ▼
+KUBERNETES (K3d)
+    │
+    ├── PostgreSQL 16 deployed with validated configuration
+    └── postgres-exporter collects metrics
+    ▼
+PROMETHEUS
+    │
+    │  Scrapes PostgreSQL metrics every 30 seconds
+    ▼
+GRAFANA — Real-Time Monitoring
+    ├── PostgreSQL Status (UP/DOWN)
+    ├── AI Security Score
+    ├── Active Connections
+    ├── Database Size
+    ├── Connection History
+    ├── Transactions per Second
+    └── Full AI Validation Report
 ```
 
 ---
