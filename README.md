@@ -118,7 +118,7 @@ GRAFANA — Real-Time Monitoring
 
 ```bash
 # Inside Ubuntu VM (VMware terminal)
-git clone https://github.com/${GITHUB_USERNAME}/smart-db-guardrail
+git clone https://github.com/youssefbj/smart-db-guardrail
 cd smart-db-guardrail
 ./scripts/bootstrap.sh
 ```
